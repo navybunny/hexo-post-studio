@@ -201,6 +201,18 @@ function createApp() {
     }
   });
 
+  // 撤回修改：恢复到该文件上次提交的版本（当前内容自动备份到 .post-studio-trash）
+  app.post('/api/revert', async (req, res) => {
+    if (!needSite(res)) return;
+    const { kind, key } = req.body || {};
+    if (!key) return res.status(400).json({ error: '缺少 key' });
+    try {
+      res.json(await posts.revertToHead(state.site, kind === 'page' ? 'page' : 'post', key));
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   // ---------- Markdown 预览 ----------
   app.post('/api/preview', (req, res) => {
     try {

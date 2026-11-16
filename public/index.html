@@ -91,6 +91,7 @@
         <div class="tb-right">
           <button class="btn small" id="pickImageBtn">＋ 图片</button>
           <input type="file" id="fileInput" accept="image/*,.tif,.tiff,.bmp" multiple hidden>
+          <button class="btn small" id="revertBtn" title="恢复到上次提交（git）的版本">撤回修改</button>
           <button class="btn small" id="saveBtn" title="Ctrl+S">保存</button>
           <button class="btn small danger" id="delBtn">删除</button>
         </div>
@@ -141,6 +142,13 @@
         <button class="btn small" id="generateBtn" title="只本地生成，不推送">仅生成</button>
       </div>
       <p class="hint">等价于 <code>hexo clean &amp;&amp; hexo generate --deploy</code>。不碰 Git，源码请自己提交。</p>
+
+      <div class="publish-notice" id="publishNotice" hidden></div>
+
+      <div class="publish-logbar" id="publishLogBar" hidden>
+        <span id="publishLogTitle">输出</span>
+        <button class="link-btn" id="clearLogBtn">清空</button>
+      </div>
       <pre class="log" id="publishLog"></pre>
     </div>
 

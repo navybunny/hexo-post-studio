@@ -251,6 +251,65 @@ function savePage(site, rel, payload) {
   return { rel, size: Buffer.byteLength(content) };
 }
 
+/* ---------------- 撤回修改：恢复到此文件上次提交的版本 ---------------- */
+
+const { spawn } = require('child_process');
+
+/** 读 git HEAD 里的某个文件；不存在或没提交过返回 null */
+function gitShowHead(blogDir, relPath) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn('git', ['show', 'HEAD:' + relPath], { cwd: blogDir });
+    } catch (e) {
+      resolve(null);
+      return;
+    }
+    const chunks = [];
+    const errs = [];
+    child.stdout.on('data', (d) => chunks.push(d));
+    child.stderr.on('data', (d) => errs.push(d));
+    child.on('error', () => resolve(null));
+    child.on('close', (code) => {
+      resolve(code === 0 ? Buffer.concat(chunks).toString('utf8') : null);
+    });
+  });
+}
+
+/**
+ * 把某个文件恢复成上次提交（git HEAD）的内容。
+ * 当前内容会先备份到博客根目录的 .post-studio-trash/，不会凭空消失。
+ */
+async function revertToHead(site, kind, key) {
+  let full;
+  if (kind === 'page') full = safePagePath(site, key);
+  else full = safeJoin(site.postsDir, key);
+
+  if (!fs.existsSync(full)) throw new Error('文件不存在：' + key);
+
+  const relPath = path.relative(site.blogDir, full).split(path.sep).join('/');
+  const head = await gitShowHead(site.blogDir, relPath);
+
+  if (head == null) {
+    throw new Error('这个文件还没有提交过，没有可撤回的版本');
+  }
+
+  const current = fs.readFileSync(full, 'utf8');
+  if (current === head) {
+    return { restored: false, unchanged: true, message: '内容和上次提交的版本一样，不用撤回' };
+  }
+
+  // 先备份当前内容
+  const trash = path.join(site.blogDir, TRASH_DIR);
+  if (!fs.existsSync(trash)) fs.mkdirSync(trash, { recursive: true });
+  const stamp = formatDate(new Date()).replace(/[-: ]/g, '');
+  const backup = path.join(trash, stamp + '-撤回前-' + path.basename(full));
+  fs.writeFileSync(backup, current, 'utf8');
+
+  fs.writeFileSync(full, head, 'utf8');
+  return { restored: true, backup, message: '已恢复到上次提交的版本' };
+}
+
 module.exports = {
   list,
   read,
@@ -260,6 +319,7 @@ module.exports = {
   listPages,
   readPage,
   savePage,
+  revertToHead,
   parse,
   serialize,
   formatDate,

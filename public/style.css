@@ -166,6 +166,33 @@ code { font-family: var(--mono); background: rgba(255,255,255,.07); padding: 1px
 .kv dd { margin: 0; text-align: right; word-break: break-all; }
 
 .publish-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+/* 发布结果提示：完成后常驻，切换文章/刷新页面即消失 */
+.publish-notice {
+  display: block;
+  margin: 10px 0 0; padding: 10px 12px; border-radius: 8px;
+  font-size: 12.5px; line-height: 1.7;
+  background: rgba(57, 197, 187, .1);
+  border: 1px solid rgba(57, 197, 187, .35);
+  color: var(--text);
+  word-break: break-word;
+}
+.publish-notice.fail {
+  background: rgba(255, 107, 107, .1);
+  border-color: rgba(255, 107, 107, .35);
+}
+.publish-notice b { color: var(--primary); }
+.publish-notice.fail b { color: var(--danger); }
+
+.publish-logbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 11.5px; color: var(--text-dim);
+}
+.link-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--text-dim); font-size: 11.5px; text-decoration: underline;
+}
+.link-btn:hover { color: var(--primary); }
 .log {
   margin: 8px 0 0; max-height: 180px; overflow: auto; font-family: var(--mono);
   font-size: 11.5px; line-height: 1.6; color: var(--text-dim);

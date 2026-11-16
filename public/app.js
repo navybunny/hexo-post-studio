@@ -81,6 +81,7 @@
     loadPages();
     refreshStatus();
     refreshImageStats();
+    clearPublishPanel();
     openFromHash();
     if (statusTimer) clearInterval(statusTimer);
     statusTimer = setInterval(refreshStatus, 20000);
@@ -161,6 +162,7 @@
 
   async function selectPost(id) {
     if (DIRTY && !confirm('当前文章有未保存的修改，确定切换？')) return;
+    clearPublishPanel();
     var data = await api('/api/posts/' + encodeURIComponent(id));
     CURRENT = { kind: 'post', key: id, data: data.data, body: data.body };
     DIRTY = false;
@@ -173,6 +175,7 @@
 
   async function selectPage(rel) {
     if (DIRTY && !confirm('当前内容有未保存的修改，确定切换？')) return;
+    clearPublishPanel();
     var data = await api('/api/page?rel=' + encodeURIComponent(rel));
     CURRENT = { kind: 'page', key: rel, data: data.data, body: data.body };
     DIRTY = false;
@@ -582,13 +585,42 @@
 
   /* ---------------- 发布 ---------------- */
 
+  /** 清空发布面板：切换文章、换页签、刷新页面时都要调用，避免上次的「✓ 完成」赖着不走 */
+  function clearPublishPanel() {
+    $('publishLog').textContent = '';
+    $('publishLogBar').hidden = true;
+    var n = $('publishNotice');
+    n.hidden = true;
+    n.textContent = '';
+    n.className = 'publish-notice';
+  }
+
+  function showPublishNotice(html, isFail) {
+    var n = $('publishNotice');
+    n.innerHTML = html;
+    n.className = 'publish-notice' + (isFail ? ' fail' : '');
+    n.hidden = false;
+  }
+
   async function doPublish(deploy) {
     if (!BOOT || !BOOT.site) return;
     var btns = [$('publishBtn'), $('generateBtn')];
     btns.forEach(function (b) { b.disabled = true; });
-    $('publishLog').textContent = '';
+
     var logEl = $('publishLog');
+    logEl.textContent = '';
+    $('publishNotice').hidden = true;
+    $('publishLogBar').hidden = false;
+    $('publishLogTitle').textContent = deploy ? '正在清理并发布…' : '正在生成…';
+
+    var lineCount = 0;
     var addLine = function (text, cls) {
+      // 输出可能很多，只留最近 400 行，避免面板越拖越长
+      if (lineCount > 400) {
+        if (logEl.firstChild) logEl.removeChild(logEl.firstChild);
+      } else {
+        lineCount += 1;
+      }
       var span = document.createElement('div');
       if (cls) span.className = cls;
       span.textContent = text;
@@ -596,6 +628,7 @@
       logEl.scrollTop = logEl.scrollHeight;
     };
 
+    var failed = false;
     try {
       var res = await fetch('/api/publish', {
         method: 'POST',
@@ -618,16 +651,68 @@
           if (obj.type === 'line') addLine(obj.text);
           else if (obj.type === 'step') addLine('▸ ' + obj.text);
           else if (obj.type === 'start') addLine(obj.text);
-          else if (obj.type === 'error') addLine('✗ ' + obj.text, 'err');
-          else if (obj.type === 'done') addLine(obj.ok ? '✓ 完成' : '✗ 失败', obj.ok ? 'ok' : 'err');
+          else if (obj.type === 'error') { addLine('✗ ' + obj.text, 'err'); failed = true; }
+          else if (obj.type === 'done') {
+            addLine(obj.ok ? '✓ 完成' : '✗ 失败', obj.ok ? 'ok' : 'err');
+            if (!obj.ok) failed = true;
+          }
         });
       }
-      toast(deploy ? '发布完成' : '生成完成');
+
+      $('publishLogTitle').textContent = '输出';
+
+      if (failed) {
+        showPublishNotice(
+          '<b>✗ 发布失败</b><br>下面是完整输出，往上翻看是哪一步报的错。',
+          true
+        );
+      } else if (deploy) {
+        showPublishNotice(
+          '<b>✓ 已发布</b><br>' +
+          'GitHub Pages 需要 <b>1~2 分钟</b>构建，现在刷新博客还看不到新内容，稍等一下再刷新。'
+        );
+      } else {
+        showPublishNotice(
+          '<b>✓ 已在本地生成</b><br>' +
+          '这次<b>没有推送</b>到线上，只是把文件生成到了 public/。要上线请点「生成并发布」。'
+        );
+      }
       refreshStatus();
     } catch (e) {
+      $('publishLogTitle').textContent = '输出';
       addLine('发布失败：' + e.message, 'err');
+      showPublishNotice('<b>✗ 发布失败</b><br>' + esc(e.message), true);
     } finally {
       btns.forEach(function (b) { b.disabled = false; });
+    }
+  }
+
+  /** 撤回修改：恢复到此文件上次提交（git HEAD）的版本 */
+  async function revertCurrent() {
+    if (!CURRENT) return;
+    var kindName = CURRENT.kind === 'page' ? '这个页面' : '这篇文章';
+    var ok = confirm(
+      '把' + kindName + '恢复到「上次提交（git）」的版本？\n\n' +
+      '你现在的内容会先备份到博客根目录的 .post-studio-trash 里，不会丢。'
+    );
+    if (!ok) return;
+
+    try {
+      var r = await api('/api/revert', {
+        method: 'POST',
+        body: { kind: CURRENT.kind, key: CURRENT.key }
+      });
+      if (r.unchanged) {
+        toast(r.message);
+        return;
+      }
+      DIRTY = false;
+      if (CURRENT.kind === 'page') await selectPage(CURRENT.key);
+      else await selectPost(CURRENT.key);
+      refreshStatus();
+      toast('已撤回修改，旧内容备份在 .post-studio-trash');
+    } catch (e) {
+      toast('撤回失败：' + e.message);
     }
   }
 
@@ -658,6 +743,8 @@
     $('newPostBtn').addEventListener('click', newPost);
     $('saveBtn').addEventListener('click', savePost);
     $('delBtn').addEventListener('click', deletePost);
+    $('revertBtn').addEventListener('click', revertCurrent);
+    $('clearLogBtn').addEventListener('click', clearPublishPanel);
 
     ['fTitle', 'fDate', 'fTags', 'fCats', 'fLayout'].forEach(function (id) {
       $(id).addEventListener('input', function () { setDirty(true); });
