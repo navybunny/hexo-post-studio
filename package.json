@@ -1,0 +1,17 @@
+﻿{
+  "name": "hexo-post-studio",
+  "version": "0.1.0",
+  "description": "本地运行的 Hexo 图文发布工作台：Markdown 编辑、图片自动压缩、一键发布",
+  "license": "MIT",
+  "main": "server/index.js",
+  "bin": { "hexo-post-studio": "bin/cli.js" },
+  "scripts": { "start": "node bin/cli.js" },
+  "keywords": ["hexo", "editor", "markdown", "image", "compress", "blog", "static-site"],
+  "engines": { "node": ">=16" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "js-yaml": "^4.1.0",
+    "marked": "^12.0.2",
+    "sharp": "^0.33.5"
+  }
+}

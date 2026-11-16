@@ -1,0 +1,123 @@
+# hexo-post-studio
+
+> 本地运行的 Hexo 图文发布工作台 —— Markdown 编辑、图片自动压缩、一键发布。
+
+写图文博客最烦的两件事：**图片太大**（一张 10 MB 的相机原图直接拖进仓库）和**发布流程碎**（生成、部署、提交，还容易忘）。这个小工具把这两件事收进一个界面里。
+
+![界面](docs/screenshot.png)
+
+## 特点
+
+- **本地跑，不联网**：`npx` 启动后在浏览器用，所有文件直接读写你本地的博客目录，不经过任何服务器。
+- **文章 + 页面都能编辑**：除了 `source/_posts/` 的文章，`source/about/index.md` 这类页面也在同一个界面里改（关于页本来就要偶尔更新）。
+- **拖图即压缩**：图片拖进编辑器 / `Ctrl+V` 粘贴，自动按你选的等级压缩，写入 `source/images/`，并把 Markdown 插到光标处。
+- **压缩等级可选**：网页版 1600 / 标准 2560 / 高质量 3200 / 不缩放，也可以自己拖滑块调长边和 JPEG 质量。
+- **绝不二次压缩**：只压你新上传的图，已有文件一个都不动（这是画质杀手最常见的原因）。
+- **实时预览**：直接套用你博客主题的 CSS，所见接近所得。
+- **状态一眼看清**：当前分支、未提交改动、未推送提交、**源码改过但还没发布**，都在顶栏。
+- **一键发布**：内部就是 `hexo clean && hexo generate --deploy`，输出实时滚动。
+- **不碰 Git**：本工具只读 Git 状态、只调 hexo 命令，提交和推送永远由你自己决定。
+- **可深链接**：刷新后停在原处，`#page=about/index.md` 这样的地址可以直接分享。
+
+## 要求
+
+- Node.js ≥ 16
+- 一个 Hexo 博客目录（有 `_config.yml` 就行，主题随你用）
+
+## 用法
+
+```bash
+# 直接跑，第一次会让你选博客目录
+npx hexo-post-studio
+
+# 或者指定目录
+npx hexo-post-studio --dir ./my-hexo-blog
+
+# 指定端口 / 不自动开浏览器
+npx hexo-post-studio --port 5000 --no-open
+```
+
+启动后浏览器会打开 `http://127.0.0.1:4321/`。博客目录会被记住（存在 `~/.hexo-post-studio.json`）。
+
+## 写一篇图文博客的流程
+
+1. 点左上「＋ 新建」，填标题
+2. 把图片**拖进编辑区**（或截图后 `Ctrl+V`）
+   → 自动压缩 → 存进 `source/images/` → 在光标处插入 `![名字](/images/名字.jpg)`
+3. 写完点「保存」（或 `Ctrl+S`）
+4. 想看效果就切「预览」/「并排」
+5. 点「生成并发布」
+
+## 关于「发布」和 Git
+
+Hexo + GitHub Pages 的常见结构是**一个仓库两个分支**：
+
+| 分支 | 内容 | 谁更新 |
+|---|---|---|
+| `source` | 源文件：`.md`、图片、主题、配置 | **你自己** `git push` |
+| `main` | 生成出来的 HTML/CSS/JS | `hexo generate --deploy` |
+
+所以完整发布是两步，本工具只做第二步：
+
+```bash
+# 本工具帮你做的
+hexo clean && hexo generate --deploy      # 更新 main → 网站变了
+
+# 你要自己做的（推荐每次发完都做一遍）
+git add -A && git commit -m "..." && git push origin source
+```
+
+**为什么工具不自动提交？** 自动提交会把你的提交历史搅乱，而且提交粒度应该由你决定。工具会在顶栏用红色标出「N 处改动」「N 个未推送」，提醒你别忘了。
+
+## 压缩等级怎么选
+
+| 等级 | 长边 | 质量 | 适合 |
+|---|---|---|---|
+| 网页版 | 1600 px | 85 | 正文栏 800 px 左右的博客，2 倍屏也够 |
+| 标准 | 2560 px | 88 | 想保留点余量、以后可能换布局 |
+| 高质量 | 3200 px | 90 | 想让人放大看细节 |
+| 不缩放 | 原尺寸 | 95 | 只想去掉元数据、重新编码 |
+
+参考实测：一张 5148×3784、7.2 MB 的相机原图
+
+- 长边 2560 / q88 → 约 354 KB（原图 4.8%）
+- 长边 1600 / q82 → 约 123 KB（原图 1.7%）
+
+## 数据与安全
+
+- 配置只存在 `~/.hexo-post-studio.json`（博客目录、压缩偏好）
+- 删除文章是**移到博客根目录的 `.post-studio-trash/`**，不是真删除
+- 服务只监听 `127.0.0.1`，没有鉴权也没关系（只有本机能访问）
+- 不做任何上传、不上报任何数据
+
+## 已知限制
+
+- 只支持本地图片目录（`source/images/`），暂不支持图床
+- 预览是近似渲染，和真实主题可能有细微差别
+- Windows / macOS / Linux 都可以，但没做移动端界面
+
+## 开发
+
+```bash
+git clone https://github.com/navybunny/hexo-post-studio.git
+cd hexo-post-studio
+npm install
+npm start
+```
+
+目录结构：
+
+```
+bin/cli.js          启动器（解析参数、起服务、开浏览器）
+server/index.js     Express 路由
+server/site.js      识别 Hexo 博客、读 _config.yml
+server/posts.js     文章读写、front-matter 解析与序列化
+server/images.js    图片列表、压缩、未引用检查
+server/git.js       只读 Git 状态、源码/产物是否同步
+server/publish.js   调 hexo 命令并流式输出
+public/             前端（原生 JS，无框架）
+```
+
+## 许可证
+
+[MIT](LICENSE)

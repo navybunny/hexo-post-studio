@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hexo-post-studio</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- 打开博客目录 -->
+<div class="modal" id="openModal">
+  <div class="modal-card">
+    <h2>选择你的 Hexo 博客目录</h2>
+    <p class="hint">填博客根目录（就是有 <code>_config.yml</code> 的那个文件夹）。只需要选一次，之后会记住。</p>
+    <input type="text" id="dirInput" placeholder="例如：F:\hexoblog\myblog">
+    <div class="modal-actions">
+      <button class="btn primary" id="dirOpenBtn">打开</button>
+    </div>
+    <p class="err" id="dirErr"></p>
+  </div>
+</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">✎</span>
+    <span id="siteTitle">hexo-post-studio</span>
+    <span class="badge" id="versionBadge"></span>
+  </div>
+  <div class="topbar-mid" id="dirLabel"></div>
+  <div class="topbar-actions">
+    <span class="pill" id="gitPill" title="代码仓库状态">—</span>
+    <span class="pill" id="deployPill" title="源码与线上产物是否一致">—</span>
+    <button class="btn small" id="changeDirBtn">换目录</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- 左：文章 / 页面 列表 -->
+  <aside class="col col-list">
+    <div class="col-tabs">
+      <button class="seg-btn active" data-view="posts">文章</button>
+      <button class="seg-btn" data-view="pages">页面</button>
+    </div>
+    <div class="col-head">
+      <input type="search" id="searchInput" placeholder="搜索标题 / 标签">
+      <button class="btn primary small" id="newPostBtn">＋ 新建</button>
+    </div>
+    <div class="post-list" id="postList"></div>
+    <div class="list-foot" id="listFoot"></div>
+  </aside>
+
+  <!-- 中：编辑器 -->
+  <section class="col col-editor">
+    <div class="editor-empty" id="editorEmpty">
+      <p>从左边选一篇文章，或者新建一篇。</p>
+      <p class="hint">支持：拖拽 / 粘贴图片，自动压缩并插入 Markdown。</p>
+    </div>
+
+    <div class="editor-wrap" id="editorWrap" hidden>
+      <div class="meta-form">
+        <label class="field field-title">
+          <span>标题</span>
+          <input type="text" id="fTitle" placeholder="文章标题">
+        </label>
+        <label class="field" id="fieldDate">
+          <span>日期</span>
+          <input type="text" id="fDate" placeholder="2026-04-10 12:00:00">
+        </label>
+        <label class="field" id="fieldLayout" hidden>
+          <span>layout</span>
+          <input type="text" id="fLayout" placeholder="about / page">
+        </label>
+        <label class="field" id="fieldTags">
+          <span>标签（逗号分隔）</span>
+          <input type="text" id="fTags" placeholder="摄影, 胶片">
+        </label>
+        <label class="field" id="fieldCats">
+          <span>分类</span>
+          <input type="text" id="fCats" placeholder="摄影">
+        </label>
+      </div>
+
+      <div class="editor-toolbar">
+        <div class="tb-left">
+          <button class="tab active" id="tabWrite">编辑</button>
+          <button class="tab" id="tabPreview">预览</button>
+          <button class="tab" id="tabSplit">并排</button>
+        </div>
+        <div class="tb-right">
+          <button class="btn small" id="pickImageBtn">＋ 图片</button>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden>
+          <button class="btn small" id="saveBtn" title="Ctrl+S">保存</button>
+          <button class="btn small danger" id="delBtn">删除</button>
+        </div>
+      </div>
+
+      <div class="editor-body mode-write" id="editorBody">
+        <textarea id="bodyInput" spellcheck="false" placeholder="在这里写 Markdown，图片可以直接拖进来或 Ctrl+V 粘贴"></textarea>
+        <iframe id="previewFrame" title="预览"></iframe>
+      </div>
+
+      <div class="editor-foot">
+        <span id="dirtyFlag"></span>
+        <span id="wordCount"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右：状态 / 压缩 / 发布 -->
+  <aside class="col col-side">
+    <div class="panel">
+      <h3>图片压缩</h3>
+      <div class="preset-row" id="presetRow"></div>
+      <div class="slider-row">
+        <label>长边上限 <b id="edgeVal">2560</b> px</label>
+        <input type="range" id="edgeRange" min="0" max="4000" step="40">
+      </div>
+      <div class="slider-row">
+        <label>JPEG 质量 <b id="qualityVal">88</b></label>
+        <input type="range" id="qualityRange" min="60" max="98" step="1">
+      </div>
+      <label class="check">
+        <input type="checkbox" id="keepOriginal">
+        <span>原图另存到 <code id="origDirName">原图/</code></span>
+      </label>
+      <p class="hint">只在你上传新图时生效，绝不会二次压缩已有图片。</p>
+    </div>
+
+    <div class="panel">
+      <h3>状态</h3>
+      <dl class="kv" id="statusKv"></dl>
+      <button class="btn small" id="refreshStatusBtn">刷新状态</button>
+    </div>
+
+    <div class="panel">
+      <h3>发布</h3>
+      <div class="publish-row">
+        <button class="btn primary" id="publishBtn">生成并发布</button>
+        <button class="btn small" id="generateBtn" title="只本地生成，不推送">仅生成</button>
+      </div>
+      <p class="hint">等价于 <code>hexo clean &amp;&amp; hexo generate --deploy</code>。不碰 Git，源码请自己提交。</p>
+      <pre class="log" id="publishLog"></pre>
+    </div>
+
+    <div class="panel">
+      <h3>图片占用</h3>
+      <div id="imageStats" class="hint">—</div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
