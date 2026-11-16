@@ -4,6 +4,14 @@
 
 写图文博客最烦的两件事：**图片太大**（一张 10 MB 的相机原图直接拖进仓库）和**发布流程碎**（生成、部署、提交，还容易忘）。这个小工具把这两件事收进一个界面里。
 
+### 👋 欢迎来看看我的博客
+
+这个工具是给自家博客写的，里面长期有**胶片摄影、模型、Wargame 和一些计算机笔记** —— 喜欢的话欢迎来逛逛：
+
+**<https://navybunny.github.io>**
+
+它为什么长这样、中途砍掉了哪些功能，写在 [《我给自己写了个 Hexo 图文发布工作台》](https://navybunny.github.io/2026/11/17/hexo-post-studio/) 里了。
+
 ![界面](docs/screenshot.png)
 
 ## 特点
@@ -154,6 +162,12 @@ BASE_URL=http://127.0.0.1:4321 FIXTURE_DIR=/tmp/hps node docs/selftest.js
 ```
 
 Windows PowerShell 用 `$env:BASE_URL='...'` 的形式设置。
+
+## 相关链接
+
+- 📝 **作者博客**：<https://navybunny.github.io> —— 胶片摄影、模型、Wargame 和计算机笔记
+- ✍️ **开发记录**：[我给自己写了个 Hexo 图文发布工作台](https://navybunny.github.io/2026/11/17/hexo-post-studio/) —— 为什么做、中途砍了什么、踩了哪些坑
+- 🐛 **问题 / 建议**：<https://github.com/navybunny/hexo-post-studio/issues>
 
 ## 许可证
 
