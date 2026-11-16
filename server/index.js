@@ -234,9 +234,10 @@ function createApp() {
   });
 
   // 上传：请求体就是原始二进制，参数放 query（避免引入 multipart 依赖）
+  // type 用函数恒真：有些系统/浏览器上传时 Content-Type 为空，也要能收
   app.post(
     '/api/upload',
-    express.raw({ type: '*/*', limit: '200mb' }),
+    express.raw({ type: () => true, limit: '200mb' }),
     async (req, res) => {
       if (!needSite(res)) return;
       try {

@@ -14,8 +14,34 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const { decodeBMP } = require('./bmp');
 
-const IMG_RE = /\.(jpe?g|png|webp|gif|avif)$/i;
+// 可上传 / 可识别的位图格式。
+// sharp 原生支持 tiff，但**不支持 bmp**，所以 bmp 走自己写的解码器（见 bmp.js）。
+const IMG_RE = /\.(jpe?g|png|webp|gif|avif|tiff?|bmp)$/i;
+// 网页最终只该出现这几种
+const WEB_EXT = /\.(jpe?g|png|webp|gif|avif)$/i;
+
+function isBmp(ext) {
+  return ext === '.bmp';
+}
+
+/** 造一个 sharp 实例（BMP 需要先解码成 raw） */
+function makePipeline(buffer, ext) {
+  if (isBmp(ext)) {
+    const bmp = decodeBMP(buffer);
+    return {
+      img: sharp(bmp.data, {
+        raw: { width: bmp.width, height: bmp.height, channels: 4 }
+      }),
+      width: bmp.width,
+      height: bmp.height,
+      hasAlpha: false
+    };
+  }
+  const img = sharp(buffer, { failOn: 'none' }).rotate(); // 按 EXIF 方向摆正
+  return { img, width: 0, height: 0, hasAlpha: false, deferred: true };
+}
 
 function walk(dir, base, out) {
   if (!dir || !fs.existsSync(dir)) return out;
@@ -48,7 +74,12 @@ async function withPool(items, limit, fn) {
 }
 
 async function dimensions(full) {
+  const ext = path.extname(full).toLowerCase();
   try {
+    if (isBmp(ext)) {
+      const bmp = decodeBMP(fs.readFileSync(full));
+      return { width: bmp.width, height: bmp.height };
+    }
     const m = await sharp(full).metadata();
     return { width: m.width, height: m.height };
   } catch (e) {
@@ -144,7 +175,11 @@ async function saveUploaded(site, buffer, originalName, options) {
   if (!fs.existsSync(site.imagesDir)) fs.mkdirSync(site.imagesDir, { recursive: true });
 
   const srcExt = (path.extname(originalName) || '.jpg').toLowerCase();
-  if (!IMG_RE.test('x' + srcExt)) throw new Error('不支持的图片格式：' + srcExt);
+  if (!IMG_RE.test('x' + srcExt)) {
+    throw new Error(
+      '不支持的图片格式：' + srcExt + '（支持 jpg / png / webp / gif / avif / tif / tiff / bmp）'
+    );
+  }
 
   // 先保存原图（可选），再压缩
   if (keepOriginal) {
@@ -154,20 +189,48 @@ async function saveUploaded(site, buffer, originalName, options) {
     fs.writeFileSync(path.join(origDir, origName), buffer);
   }
 
-  let img = sharp(buffer, { failOn: 'none' }).rotate(); // 按 EXIF 方向自动摆正
-  const meta = await img.metadata();
-  const longEdge = Math.max(meta.width || 0, meta.height || 0);
+  const pipe = makePipeline(buffer, srcExt);
+  let img = pipe.img;
+  let srcW = pipe.width;
+  let srcH = pipe.height;
+  let hasAlpha = pipe.hasAlpha;
+
+  if (pipe.deferred) {
+    const meta = await img.metadata();
+    srcW = meta.width || 0;
+    srcH = meta.height || 0;
+    hasAlpha = !!meta.hasAlpha;
+
+    // 动图（GIF/WebP/AVIF 多帧）不做转换，否则会被压成只剩第一帧
+    if (meta.pages && meta.pages > 1) {
+      const fileName = uniqueName(site.imagesDir, path.basename(originalName));
+      fs.writeFileSync(path.join(site.imagesDir, fileName), buffer);
+      return {
+        fileName,
+        url: '/images/' + fileName,
+        before: buffer.length,
+        after: buffer.length,
+        width: srcW,
+        height: srcH,
+        format: srcExt.replace('.', ''),
+        note: '动图，已原样保留（未压缩）'
+      };
+    }
+  }
+
+  const longEdge = Math.max(srcW, srcH);
   if (maxEdge > 0 && longEdge > maxEdge) {
     const scale = maxEdge / longEdge;
-    img = img.resize(Math.round((meta.width || 0) * scale), Math.round((meta.height || 0) * scale), {
+    img = img.resize(Math.round(srcW * scale), Math.round(srcH * scale), {
       fit: 'inside',
       withoutEnlargement: true
     });
   }
 
-  // PNG 带透明通道就保持 PNG，其余统一转 JPEG 以减小体积
+  // 输出格式：只留网页能用的。
+  // bmp / tiff 一律转 JPEG —— 它们动辄几十 MB，网页必须转。
   let outExt = '.jpg';
-  if (srcExt === '.png' && meta.hasAlpha) outExt = '.png';
+  if (srcExt === '.png' && hasAlpha) outExt = '.png';
   else if (srcExt === '.webp') outExt = '.webp';
 
   let outBuf;

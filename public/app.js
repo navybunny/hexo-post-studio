@@ -374,7 +374,11 @@
     var inserted = [];
     for (var i = 0; i < files.length; i += 1) {
       var f = files[i];
-      if (!/^image\//.test(f.type) && !/\.(jpe?g|png|webp|gif|avif)$/i.test(f.name)) continue;
+      if (
+        !/^image\//.test(f.type) &&
+        !/\.(jpe?g|png|webp|gif|avif|tiff?|bmp)$/i.test(f.name)
+      )
+        continue;
       toast('正在压缩 ' + (i + 1) + '/' + files.length + '：' + f.name);
       try {
         var q = new URLSearchParams({
