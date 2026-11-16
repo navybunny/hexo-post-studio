@@ -5,13 +5,16 @@
   "license": "MIT",
   "author": "NavyBunny",
   "main": "server/index.js",
-  "bin": { "hexo-post-studio": "bin/cli.js" },
+  "bin": {
+    "hexo-post-studio": "bin/cli.js"
+  },
   "files": [
     "bin/",
     "server/",
     "public/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/screenshot.png"
   ],
   "scripts": {
     "start": "node bin/cli.js"
@@ -27,7 +30,9 @@
     "github-pages",
     "static-site"
   ],
-  "engines": { "node": ">=16" },
+  "engines": {
+    "node": ">=16"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/navybunny/hexo-post-studio.git"
