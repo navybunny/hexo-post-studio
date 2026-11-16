@@ -141,20 +141,60 @@ function slugify(title) {
   return s || 'untitled-' + Date.now();
 }
 
+/**
+ * 按博客自己的 new_post_name 生成文件名（Hexo 的 :year / :month / :title 这些占位符）。
+ * 尊重别人的博客约定，而不是一律 :title.md。
+ */
+function renderNewPostName(pattern, title, date) {
+  const d = date || new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const map = {
+    ':post_title': String(title || '').trim() || 'untitled',
+    ':title': slugify(title || ''),
+    ':year': String(d.getFullYear()),
+    ':month': pad(d.getMonth() + 1),
+    ':day': pad(d.getDate()),
+    ':hour': pad(d.getHours()),
+    ':minute': pad(d.getMinutes()),
+    ':second': pad(d.getSeconds()),
+    ':i_month': String(d.getMonth() + 1),
+    ':i_day': String(d.getDate())
+  };
+
+  let out = String(pattern || ':title');
+  // 长的占位符先替换，避免 :title 被 :i_title 之类误伤
+  Object.keys(map)
+    .sort((a, b) => b.length - a.length)
+    .forEach((k) => {
+      out = out.split(k).join(map[k]);
+    });
+
+  // 文件名安全处理：去掉非法字符和路径分隔符
+  out = out.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, '-').replace(/-+/g, '-');
+  out = out.replace(/^-+|-+$/g, '');
+  if (!/\.md$/i.test(out)) out += '.md';
+  return out || 'untitled-' + Date.now() + '.md';
+}
+
 function create(site, payload) {
   if (!site.postsDir) throw new Error('找不到 _posts 目录');
   if (!fs.existsSync(site.postsDir)) fs.mkdirSync(site.postsDir, { recursive: true });
 
-  let id = slugify(payload.title || '未命名') + '.md';
+  const title = payload.title || '未命名';
+  const when = payload.date ? new Date(payload.date) : new Date();
+  const pattern = site.newPostName || ':title.md';
+
+  let id = renderNewPostName(pattern, title, when);
+  const stem = id.replace(/\.md$/i, '');
   let i = 2;
   while (fs.existsSync(path.join(site.postsDir, id))) {
-    id = slugify(payload.title || '未命名') + '-' + i + '.md';
+    id = stem + '-' + i + '.md';
     i += 1;
   }
 
   const data = {
-    title: payload.title || '未命名',
-    date: formatDate(payload.date ? new Date(payload.date) : new Date()),
+    title,
+    date: formatDate(when),
     tags: payload.tags || [],
     categories: payload.categories || ''
   };

@@ -172,7 +172,8 @@ async function saveUploaded(site, buffer, originalName, options) {
   const keepOriginal = !!options.keepOriginal;
   const originalDirName = options.originalDir || '原图';
 
-  if (!site.imagesDir) throw new Error('找不到 source/images 目录');
+  // 新博客通常还没有 source/images，这里按需创建，不要让用户第一次上传就失败
+  if (!site.imagesDir) throw new Error('找不到博客的 source 目录，无法确定图片放哪里');
   if (!fs.existsSync(site.imagesDir)) fs.mkdirSync(site.imagesDir, { recursive: true });
 
   const srcExt = (path.extname(originalName) || '.jpg').toLowerCase();

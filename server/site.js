@@ -38,6 +38,8 @@ function loadSite(blogDir) {
   const sourceDir = cfg.source_dir || 'source';
   const sourcePath = path.join(dir, sourceDir);
   const postsDir = path.join(sourcePath, '_posts');
+  // 注意：images 目录可能还不存在（刚 hexo init 的新博客就没有），
+  // 但只要 source 目录在，就把目标路径记下来，上传时按需创建。
   const imagesDir = path.join(sourcePath, 'images');
   const themeName = cfg.theme || '';
   const themeDir = themeName ? path.join(dir, 'themes', themeName) : '';
@@ -69,7 +71,8 @@ function loadSite(blogDir) {
     sourceDir,
     sourcePath: exists(sourcePath) ? sourcePath : '',
     postsDir: exists(postsDir) ? postsDir : '',
-    imagesDir: exists(imagesDir) ? imagesDir : '',
+    // 目录可以还不存在（新博客），上传时会自动创建
+    imagesDir: exists(sourcePath) ? imagesDir : '',
     isGitRepo: exists(path.join(dir, '.git')),
     deployRepo,
     deployBranch,
