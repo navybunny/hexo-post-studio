@@ -209,6 +209,10 @@ function listPages(site) {
       if (ent.isDirectory()) {
         walk(full, rel);
       } else if (/\.(md|markdown)$/i.test(ent.name)) {
+        // 跳过 source 根目录下的 README（它通常是给仓库首页看的，不是博客页面）
+        if (!relBase && /^readme\.(md|markdown)$/i.test(ent.name)) continue;
+        // 下划线开头的文件 Hexo 不渲染
+        if (ent.name.indexOf('_') === 0) continue;
         const st = fs.statSync(full);
         let data = {};
         try {
