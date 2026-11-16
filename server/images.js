@@ -44,16 +44,17 @@ function makePipeline(buffer, ext) {
 }
 
 function walk(dir, base, out) {
-  if (!dir || !fs.existsSync(dir)) return out;
+  const acc = out || [];
+  if (!dir || !fs.existsSync(dir)) return acc;
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
-      walk(full, base + '/' + ent.name, out);
+      walk(full, base + '/' + ent.name, acc);
     } else if (IMG_RE.test(ent.name)) {
-      out.push({ full, rel: base + '/' + ent.name });
+      acc.push({ full, rel: base + '/' + ent.name });
     }
   }
-  return out;
+  return acc;
 }
 
 async function withPool(items, limit, fn) {

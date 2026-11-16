@@ -368,42 +368,73 @@
     };
   }
 
-  async function uploadFiles(files) {
-    if (!files || !files.length) return;
+  async function uploadFiles(fileList) {
+    // 必须立刻快照成数组：FileList 是「活的」，调用方随后清空 input 会让它变空
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+
+    // 过滤掉非图片
+    files = files.filter(function (f) {
+      return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|avif|tiff?|bmp)$/i.test(f.name);
+    });
+    if (!files.length) {
+      toast('没有可上传的图片');
+      return;
+    }
+
     var p = compressParams();
-    var inserted = [];
-    for (var i = 0; i < files.length; i += 1) {
-      var f = files[i];
-      if (
-        !/^image\//.test(f.type) &&
-        !/\.(jpe?g|png|webp|gif|avif|tiff?|bmp)$/i.test(f.name)
-      )
-        continue;
-      toast('正在压缩 ' + (i + 1) + '/' + files.length + '：' + f.name);
-      try {
-        var q = new URLSearchParams({
-          name: f.name,
-          maxEdge: String(p.maxEdge),
-          quality: String(p.quality),
-          keepOriginal: p.keepOriginal,
-          originalDir: p.originalDir
-        });
-        var res = await api('/api/upload?' + q.toString(), {
-          method: 'POST',
-          raw: true,
-          body: f
-        });
-        var alt = f.name.replace(/\.[^.]+$/, '');
-        inserted.push('![' + alt + '](' + res.url + ')');
-        toast(f.name + '：' + fmtBytes(res.before) + ' → ' + fmtBytes(res.after));
-      } catch (e) {
-        toast('上传失败：' + e.message);
+    var total = files.length;
+    var done = 0;
+    var results = new Array(total);
+
+    toast('正在压缩 ' + total + ' 张…');
+
+    // 并发 3 个，既快又不会把 CPU/磁盘打满；结果按原顺序收集
+    async function worker(slot) {
+      for (var i = slot; i < total; i += 3) {
+        var f = files[i];
+        try {
+          var q = new URLSearchParams({
+            name: f.name,
+            maxEdge: String(p.maxEdge),
+            quality: String(p.quality),
+            keepOriginal: p.keepOriginal,
+            originalDir: p.originalDir
+          });
+          var res = await api('/api/upload?' + q.toString(), {
+            method: 'POST',
+            raw: true,
+            body: f
+          });
+          var alt = f.name.replace(/\.[^.]+$/, '');
+          results[i] = {
+            md: '![' + alt + '](' + res.url + ')',
+            msg: f.name + '：' + fmtBytes(res.before) + ' → ' + fmtBytes(res.after)
+          };
+        } catch (e) {
+          results[i] = { err: f.name + '：' + e.message };
+        }
+        done += 1;
+        if (done < total) toast('已完成 ' + done + '/' + total);
       }
     }
-    if (inserted.length) {
-      insertAtCursor(inserted.join('\n'));
+
+    await Promise.all([worker(0), worker(1), worker(2)]);
+
+    var ok = results.filter(function (r) { return r && r.md; });
+    var bad = results.filter(function (r) { return r && r.err; });
+
+    if (ok.length) {
+      insertAtCursor(ok.map(function (r) { return r.md; }).join('\n'));
       refreshImageStats();
       refreshStatus();
+    }
+    if (bad.length) {
+      toast('有 ' + bad.length + ' 张失败：' + bad[0].err);
+    } else if (ok.length === 1) {
+      toast(ok[0].msg);
+    } else if (ok.length > 1) {
+      toast('已插入 ' + ok.length + ' 张图片');
     }
   }
 
@@ -644,8 +675,10 @@
 
     $('pickImageBtn').addEventListener('click', function () { $('fileInput').click(); });
     $('fileInput').addEventListener('change', function (e) {
-      uploadFiles(e.target.files);
-      e.target.value = '';
+      // 先快照再清空：FileList 是实时的，直接清空会让异步上传只看到第一张
+      var picked = Array.prototype.slice.call(e.target.files || []);
+      e.target.value = ''; // 清空后才能再次选择同一个文件
+      uploadFiles(picked);
     });
 
     // 拖拽图片进编辑器
