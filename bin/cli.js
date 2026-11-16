@@ -82,6 +82,14 @@ async function main() {
     } catch (e) {
       console.warn('  ⚠ ' + e.message);
       console.warn('  → 启动后请在页面上手动选择博客目录');
+      // 记住的目录已经失效（被删或改名），就别一直留着它
+      if (!args.dir) {
+        try {
+          configStore.write({ blogDir: '' });
+        } catch (e2) {
+          /* 忽略 */
+        }
+      }
     }
   } else {
     console.log('  还没有指定博客目录，启动后在页面上选一次即可（会记住）');
