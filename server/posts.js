@@ -11,6 +11,13 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
+// 去掉 UTF-8 BOM：记事本等 Windows 编辑器保存的 .md 常常带 BOM，
+// 不处理的话开头不是 ---，front-matter 会被整段当成正文，
+// 保存时更会把它当正文写回去、生成两份 front-matter。
+function stripBOM(s) {
+  return String(s).replace(/^\uFEFF/, '');
+}
+
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const TRASH_DIR = '.post-studio-trash';
 
@@ -42,8 +49,8 @@ function normalizeForDump(data) {
 }
 
 function parse(raw) {
-  const m = FM_RE.exec(raw);
-  if (!m) return { data: {}, body: raw };
+  const m = FM_RE.exec(stripBOM(raw));
+  if (!m) return { data: {}, body: stripBOM(raw) };
   let data = {};
   try {
     // 用 JSON_SCHEMA：不把 `2026-04-10 12:00:00` 解析成 Date。
@@ -65,13 +72,30 @@ function serialize(data, body) {
   return '---\n' + dump + '---\n\n' + String(body || '').replace(/^\n+/, '');
 }
 
+/**
+ * 列出 _posts 下的所有文章。
+ * Hexo 支持在 _posts 里再分子目录（例如 _posts/2026/xxx.md），所以这里必须递归；
+ * id 用相对路径（2026/xxx.md），read/save/remove 都按这个 id 走。
+ */
+function collectMarkdown(dir, base, out) {
+  const acc = out || [];
+  if (!dir || !fs.existsSync(dir)) return acc;
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, ent.name);
+    const rel = base ? base + '/' + ent.name : ent.name;
+    if (ent.isDirectory()) {
+      collectMarkdown(full, rel, acc);
+    } else if (/\.(md|markdown)$/i.test(ent.name)) {
+      acc.push({ full, rel });
+    }
+  }
+  return acc;
+}
+
 function listFiles(dir) {
   if (!dir || !fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter((f) => /\.(md|markdown)$/i.test(f))
-    .map((f) => {
-      const full = path.join(dir, f);
+  return collectMarkdown(dir, '')
+    .map(({ full, rel }) => {
       const st = fs.statSync(full);
       const raw = fs.readFileSync(full, 'utf8');
       const { data, body } = parse(raw);
@@ -83,8 +107,8 @@ function listFiles(dir) {
         .replace(/\s+/g, ' ')
         .trim();
       return {
-        id: f,
-        title: data.title ? String(data.title) : f.replace(/\.md$/i, ''),
+        id: rel,
+        title: data.title ? String(data.title) : path.basename(rel).replace(/\.md$/i, ''),
         date: data.date ? formatDate(data.date) : '',
         tags: Array.isArray(data.tags) ? data.tags.map(String) : data.tags ? [String(data.tags)] : [],
         categories: Array.isArray(data.categories)
