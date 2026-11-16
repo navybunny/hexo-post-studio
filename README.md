@@ -11,11 +11,14 @@
 - **本地跑，不联网**：`npx` 启动后在浏览器用，所有文件直接读写你本地的博客目录，不经过任何服务器。
 - **文章 + 页面都能编辑**：除了 `source/_posts/` 的文章，`source/about/index.md` 这类页面也在同一个界面里改（关于页本来就要偶尔更新）。
 - **拖图即压缩**：图片拖进编辑器 / `Ctrl+V` 粘贴，自动按你选的等级压缩，写入 `source/images/`，并把 Markdown 插到光标处。
+- **一次拖入多张**：多个文件一起选/一起拖，按并发 3 张压缩，完成后按原顺序一次插入。
 - **压缩等级可选**：网页版 1600 / 标准 2560 / 高质量 3200 / 不缩放，也可以自己拖滑块调长边和 JPEG 质量。
 - **绝不二次压缩**：只压你新上传的图，已有文件一个都不动（这是画质杀手最常见的原因）。
+- **支持扫描仪格式**：`.bmp` / `.tif` / `.tiff` 都能直接传，自动转成网页用的 JPEG（见下方说明）。
 - **实时预览**：直接套用你博客主题的 CSS，所见接近所得。
+- **撤回修改**：改坏了点一下「撤回修改」，恢复到上次提交的版本（当前内容会先备份，不会丢）。
 - **状态一眼看清**：当前分支、未提交改动、未推送提交、**源码改过但还没发布**，都在顶栏。
-- **一键发布**：内部就是 `hexo clean && hexo generate --deploy`，输出实时滚动。
+- **一键发布**：内部就是 `hexo clean && hexo generate --deploy`，输出实时滚动，发完提醒你 Pages 还要等 1~2 分钟。
 - **不碰 Git**：本工具只读 Git 状态、只调 hexo 命令，提交和推送永远由你自己决定。
 - **可深链接**：刷新后停在原处，`#page=about/index.md` 这样的地址可以直接分享。
 
@@ -134,12 +137,23 @@ npm start
 bin/cli.js          启动器（解析参数、起服务、开浏览器）
 server/index.js     Express 路由
 server/site.js      识别 Hexo 博客、读 _config.yml
-server/posts.js     文章读写、front-matter 解析与序列化
+server/posts.js     文章与页面读写、front-matter 解析、撤回修改
 server/images.js    图片列表、压缩、未引用检查
+server/bmp.js       极简 BMP 解码器（sharp 不支持读 BMP）
 server/git.js       只读 Git 状态、源码/产物是否同步
 server/publish.js   调 hexo 命令并流式输出
 public/             前端（原生 JS，无框架）
+docs/selftest-*.js  自测脚本（需要 node + 一个测试夹具）
 ```
+
+自测脚本都是「起一个服务，然后打接口」的形式，可以用环境变量指定目标：
+
+```bash
+# 中文往返、多图上传、撤回、发布流
+BASE_URL=http://127.0.0.1:4321 FIXTURE_DIR=/tmp/hps node docs/selftest.js
+```
+
+Windows PowerShell 用 `$env:BASE_URL='...'` 的形式设置。
 
 ## 许可证
 

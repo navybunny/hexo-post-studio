@@ -1,13 +1,41 @@
-﻿{
+{
   "name": "hexo-post-studio",
   "version": "0.1.0",
   "description": "本地运行的 Hexo 图文发布工作台：Markdown 编辑、图片自动压缩、一键发布",
   "license": "MIT",
+  "author": "NavyBunny",
   "main": "server/index.js",
   "bin": { "hexo-post-studio": "bin/cli.js" },
-  "scripts": { "start": "node bin/cli.js" },
-  "keywords": ["hexo", "editor", "markdown", "image", "compress", "blog", "static-site"],
+  "files": [
+    "bin/",
+    "server/",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/cli.js"
+  },
+  "keywords": [
+    "hexo",
+    "hexo-editor",
+    "editor",
+    "markdown",
+    "image",
+    "image-compression",
+    "blog",
+    "github-pages",
+    "static-site"
+  ],
   "engines": { "node": ">=16" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/navybunny/hexo-post-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/navybunny/hexo-post-studio/issues"
+  },
+  "homepage": "https://github.com/navybunny/hexo-post-studio#readme",
   "dependencies": {
     "express": "^4.19.2",
     "js-yaml": "^4.1.0",

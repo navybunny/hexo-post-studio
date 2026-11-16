@@ -1,9 +1,15 @@
 // 用 Node 发 UTF-8 请求，验证中文标题/标签/正文的完整往返
-const BASE = 'http://127.0.0.1:4399';
+// 用法：先启动一个指向测试夹具的服务，然后 node docs/selftest.js
+//   环境变量：BASE_URL（默认 http://127.0.0.1:4321）、FIXTURE_DIR（夹具目录）
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const j = async (method, path, body) => {
-  const res = await fetch(BASE + path, {
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:4321';
+const FX = process.env.FIXTURE_DIR || path.join(os.tmpdir(), 'hps-fixture');
+
+const j = async (method, urlPath, body) => {
+  const res = await fetch(BASE + urlPath, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : {},
     body: body ? JSON.stringify(body) : undefined
@@ -35,14 +41,14 @@ const j = async (method, path, body) => {
   out.push('tags 未被改动: ' + (JSON.stringify(two.data.tags) === JSON.stringify(['摄影', '测试'])));
 
   // 4. 原始文件内容
-  const raw = fs.readFileSync('F:/hexoblog/_fixture/source/_posts/' + c.id, 'utf8');
+  const raw = fs.readFileSync(path.join(FX, 'source/_posts', c.id), 'utf8');
   out.push('---- 文件实际内容 ----');
   out.push(raw.split('\n').slice(0, 8).join('\n'));
 
   // 5. 删除 -> 回收目录
   const del = await j('DELETE', '/api/posts/' + encodeURIComponent(c.id));
   out.push('删除后移到: ' + del.movedTo);
-  out.push('原文件已不存在: ' + !fs.existsSync('F:/hexoblog/_fixture/source/_posts/' + c.id));
+  out.push('原文件已不存在: ' + !fs.existsSync(path.join(FX, 'source/_posts', c.id)));
 
   console.log(out.join('\n'));
 })().catch((e) => {

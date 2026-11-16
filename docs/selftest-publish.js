@@ -1,5 +1,7 @@
 // 验证状态接口 + 发布流（deploy:false 只生成，不动线上）
-const BASE = 'http://127.0.0.1:4399';
+// 用法：node docs/selftest-publish.js
+//   环境变量：BASE_URL（默认 http://127.0.0.1:4321）、BLOG_DIR（要检查的 Hexo 博客目录）
+const BASE = process.env.BASE_URL || 'http://127.0.0.1:4321';
 
 const j = async (method, path, body) => {
   const res = await fetch(BASE + path, {
@@ -11,7 +13,7 @@ const j = async (method, path, body) => {
 };
 
 (async () => {
-  await j('POST', '/api/open', { blogDir: 'F:\\hexoblog\\myblog' });
+  await j('POST', '/api/open', { blogDir: process.env.BLOG_DIR || process.cwd() });
   console.log('=== 已切到真实博客 ===');
 
   const st = await j('GET', '/api/status');

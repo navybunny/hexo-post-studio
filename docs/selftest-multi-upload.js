@@ -1,15 +1,21 @@
 // 验证多图上传：用 DataTransfer 构造 3 个 File，塞进 input 并触发 change
+// 需要：Chrome 以 --remote-debugging-port=9222 启动，客户端跑在 APP_PORT 上，
+//       IMG_DIR 里放 multi-1.jpg ~ multi-3.jpg 三张测试图
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
-const PORT = 9433;
-const OUT = 'F:\\hexoblog\\_multi.json';
+const IMG_DIR = process.env.IMG_DIR || path.join(os.tmpdir(), 'hps-img');
+
+const PORT = process.env.CDP_PORT || 9222;
+const OUT = process.env.OUT_JSON || path.join(os.tmpdir(), 'hps-multi.json');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
   // 读现成的 3 张测试图（用 Pillow 生成，绕开 sharp 的 create 接口）
   const b64 = [];
   for (let i = 1; i <= 3; i += 1) {
-    const p = `F:/hexoblog/_multi_img/multi-${i}.jpg`;
+    const p = path.join(IMG_DIR, `multi-${i}.jpg`);
     b64.push(fs.readFileSync(p).toString('base64'));
   }
 
@@ -39,12 +45,9 @@ async function main() {
 
   await send('Page.enable');
   await send('Runtime.enable');
-  await send('Page.navigate', { url: `http://127.0.0.1:8765/x` }); // 占位，稍后真正导航
-  await sleep(300);
 
-  // 直接导航到客户端（端口由调用方传入环境变量）
-  const appPort = process.env.APP_PORT || 4433;
-  await send('Page.navigate', { url: `http://127.0.0.1:${appPort}/#post=a.md` });
+  const appPort = process.env.APP_PORT || 4321;
+  await send('Page.navigate', { url: `http://127.0.0.1:${appPort}/#post=${encodeURIComponent(process.env.POST_ID || 'a.md')}` });
   await sleep(2500);
 
   const script = `(async function(){

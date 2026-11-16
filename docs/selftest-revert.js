@@ -4,7 +4,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const PORT = process.env.APP_PORT || 4441;
-const FX = 'F:\\hexoblog\\_revert_fx';
+const FX = process.env.FIXTURE_DIR || path.join(require('os').tmpdir(), 'hps-revert-fx');
 
 const ORIGINAL = `---
 title: 原始标题
