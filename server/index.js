@@ -218,6 +218,24 @@ function createApp() {
     try {
       const body = String((req.body && req.body.body) || '');
       let html = marked.parse(body, { breaks: true, gfm: true });
+
+      // ::: photo-grid 容器：把段落里那串图片提出来装进网格 div
+      // （规则与博客的 scripts/image-viewer.js 保持一致，否则预览和实际不一致）
+      const wrapGrid = (natural, inner) => {
+        const imgs = inner.match(/<img\b[^>]*>/gi) || [];
+        if (!imgs.length) return null;
+        const cls = 'photo-grid' + (natural ? ' natural' : '');
+        return '<div class="' + cls + '">\n' + imgs.join('\n') + '\n</div>';
+      };
+      html = html.replace(
+        /<p>\s*:::\s*photo-grid\s*(natural)?\s*<\/p>([\s\S]*?)<p>\s*:::\s*<\/p>/gi,
+        (whole, natural, inner) => wrapGrid(natural, inner) || whole
+      );
+      html = html.replace(
+        /<p>\s*:::\s*photo-grid\s*(natural)?(?:\s|<br\s*\/?>)+([\s\S]*?):::\s*<\/p>/gi,
+        (whole, natural, inner) => wrapGrid(natural, inner) || whole
+      );
+
       // 把文章里的 /images/ 指到预览路由，否则预览里的图全是裂的
       html = html.replace(/(["'(])\/images\//g, '$1/blog-images/');
       res.json({ html });

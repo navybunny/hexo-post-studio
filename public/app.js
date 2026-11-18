@@ -349,6 +349,15 @@
         '<style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:system-ui}' +
         '.post-content{max-width:780px;margin:0 auto;line-height:1.8}' +
         '.post-content img{max-width:100%;height:auto;border-radius:8px;display:block;margin:16px auto}' +
+        // 照片墙 / 视频 / 徽章的预览样式（选择器比上面那条更具体，能盖住它）
+        '.post-content .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}' +
+        '.post-content .photo-grid img{width:100%;height:100%;margin:0;aspect-ratio:3/2;object-fit:cover}' +
+        '.post-content .photo-grid.natural img{aspect-ratio:auto;height:auto;object-fit:contain}' +
+        '.post-content .video-embed{position:relative;aspect-ratio:16/9;margin:16px 0;background:#000;border-radius:8px;overflow:hidden}' +
+        '.post-content .video-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}' +
+        '.post-content .video-link{text-align:center;font-size:.9em;color:#888}' +
+        '.post-content .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}' +
+        '.post-content .badge{display:inline-block;padding:4px 12px;margin:0;border-radius:999px;border:2px solid #39C5BB;background:rgba(57,197,187,.12);color:#2aa79f;font-size:.86em;font-weight:600}' +
         'table{border-collapse:collapse;width:100%}td,th{padding:6px;border:1px solid #ddd}' +
         'pre{background:#f6f8fa;padding:12px;border-radius:8px;overflow:auto}' +
         'code{background:#f2f4f7;padding:1px 4px;border-radius:3px}' +
