@@ -208,9 +208,24 @@ async function j(base, urlPath, opts) {
   }
 
   const passed = results.filter((r) => r.pass).length;
+  const failed = results.filter((r) => !r.pass);
   console.log('');
   console.log('────────────────────────────────');
   console.log('  通过 ' + passed + ' / ' + results.length);
   console.log('────────────────────────────────');
+
+  // 在 GitHub Actions 里，把失败项打成注解，方便直接看到是哪条断言挂了
+  // （Actions 的完整日志需要鉴权才能下载，注解是公开可读的）
+  if (failed.length && process.env.GITHUB_ACTIONS) {
+    for (const f of failed) {
+      const msg = (f.name + (f.extra ? ' — ' + f.extra : '')).replace(/\r?\n/g, ' ⏎ ');
+      console.log('::error title=测试失败::' + msg.slice(0, 400));
+    }
+    if (serverLog) {
+      const tail = serverLog.slice(-800).replace(/\r?\n/g, ' ⏎ ').replace(/%/g, '%25');
+      console.log('::error title=服务端日志::' + tail.slice(0, 800));
+    }
+  }
+
   process.exit(passed === results.length ? 0 : 1);
 })();
