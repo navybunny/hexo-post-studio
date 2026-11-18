@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/navybunny/hexo-post-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/navybunny/hexo-post-studio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-39C5BB.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A518.17-39C5BB.svg)](#要求)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520.3-39C5BB.svg)](#要求)
 
 > 本地运行的 Hexo 图文发布工作台 —— Markdown 编辑、图片自动压缩、一键发布。
 
@@ -36,7 +36,7 @@
 
 ## 要求
 
-- Node.js ≥ 18.17（这是 `sharp` 的要求；18 / 20 / 22 都测过）
+- Node.js ≥ 20.3（这是 `sharp` 的要求；20 和 22 都测过）
 - 一个 Hexo 博客目录（有 `_config.yml` 就行，主题随你用）
 
 ## 用法
@@ -166,7 +166,7 @@ npm test         # 自动化测试
 
 覆盖的内容：识别博客、中文标题与日期往返、front-matter 不重复、`new_post_name` 生效、`::: photo-grid` 预览转换、上传文件名清洗、重复图片去重、非 git 仓库的降级行为。
 
-CI 在 GitHub Actions 上跑 **Ubuntu 18/20/22 + Windows 20 + macOS 20** 五个组合，`.github/workflows/ci.yml` 里可以看配置。
+CI 在 GitHub Actions 上跑 **Windows 20/22 + macOS 22 + Ubuntu 20** 四个组合 —— 这个工具主要在 Windows 和 macOS 上用，两者都覆盖；`.github/workflows/ci.yml` 里可以看配置。
 
 目录结构：
 

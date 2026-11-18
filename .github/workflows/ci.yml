@@ -13,13 +13,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        node: ['18', '20', '22']
         include:
-          # 这个工具处理本地路径，Windows 和 macOS 各跑一遍才算数
+          # 这个工具主要给本地写博客的人用，Windows 和 macOS 是主力
+          # （顺带说明：没人会在 Ubuntu 服务器上写博客，但 linux 还是cover一下）
           - os: windows-latest
             node: '20'
+          - os: windows-latest
+            node: '22'
           - os: macos-latest
+            node: '22'
+          - os: ubuntu-latest
             node: '20'
 
     steps:
