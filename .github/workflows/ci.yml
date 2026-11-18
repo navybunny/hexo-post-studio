@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: ['18', '20', '22']
+        include:
+          # 这个工具处理本地路径，Windows 和 macOS 各跑一遍才算数
+          - os: windows-latest
+            node: '20'
+          - os: macos-latest
+            node: '20'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 语法检查
+        shell: bash
+        run: |
+          set -e
+          for f in bin/*.js server/*.js public/*.js test/*.js scripts/*.js; do
+            [ -e "$f" ] || continue
+            echo "check $f"
+            node --check "$f"
+          done
+
+      - name: 自动化测试
+        run: node test/ci.js
+
+      - name: 检查 npm 包内容
+        shell: bash
+        run: |
+          npm pack --dry-run
+          echo "---- 确认没有把不该进包的文件打进去 ----"
+          if npm pack --dry-run 2>&1 | grep -Eq 'node_modules|\.github|docs/selftest'; then
+            echo "::error::npm 包里混进了不该有的文件"
+            exit 1
+          fi

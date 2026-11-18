@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # 依赖升级：每周检查一次，自动开 PR
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps'
+    groups:
+      # 把 patch 级别的小升级合并成一个 PR，免得刷屏
+      patch:
+        update-types: ['patch']
+
+  # Actions 本身也跟进
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'

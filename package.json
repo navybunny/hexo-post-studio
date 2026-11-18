@@ -17,7 +17,9 @@
     "docs/screenshot.png"
   ],
   "scripts": {
-    "start": "node bin/cli.js"
+    "start": "node bin/cli.js",
+    "test": "node test/ci.js",
+    "check": "node --check bin/cli.js && node --check server/index.js && node --check public/app.js"
   },
   "keywords": [
     "hexo",
@@ -31,7 +33,7 @@
     "static-site"
   ],
   "engines": {
-    "node": ">=16"
+    "node": "^18.17.0 || ^20.3.0 || >=21.0.0"
   },
   "repository": {
     "type": "git",

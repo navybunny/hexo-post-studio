@@ -1,5 +1,9 @@
 # hexo-post-studio
 
+[![CI](https://github.com/navybunny/hexo-post-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/navybunny/hexo-post-studio/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-39C5BB.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A518.17-39C5BB.svg)](#要求)
+
 > 本地运行的 Hexo 图文发布工作台 —— Markdown 编辑、图片自动压缩、一键发布。
 
 写图文博客最烦的两件事：**图片太大**（一张 10 MB 的相机原图直接拖进仓库）和**发布流程碎**（生成、部署、提交，还容易忘）。这个小工具把这两件事收进一个界面里。
@@ -32,7 +36,7 @@
 
 ## 要求
 
-- Node.js ≥ 16
+- Node.js ≥ 18.17（这是 `sharp` 的要求；18 / 20 / 22 都测过）
 - 一个 Hexo 博客目录（有 `_config.yml` 就行，主题随你用）
 
 ## 用法
@@ -154,8 +158,15 @@ git add -A && git commit -m "..." && git push origin source
 git clone https://github.com/navybunny/hexo-post-studio.git
 cd hexo-post-studio
 npm install
-npm start
+npm start        # 起服务
+npm test         # 自动化测试
 ```
+
+**测试是自包含的**：`npm test` 会自己造一个临时 Hexo 博客、起服务、打接口、跑完把临时目录删掉 —— 不会碰你真实的博客目录，也不会联外网。
+
+覆盖的内容：识别博客、中文标题与日期往返、front-matter 不重复、`new_post_name` 生效、`::: photo-grid` 预览转换、上传文件名清洗、重复图片去重、非 git 仓库的降级行为。
+
+CI 在 GitHub Actions 上跑 **Ubuntu 18/20/22 + Windows 20 + macOS 20** 五个组合，`.github/workflows/ci.yml` 里可以看配置。
 
 目录结构：
 
