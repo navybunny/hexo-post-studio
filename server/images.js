@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
+const crypto = require('crypto');
 const { decodeBMP } = require('./bmp');
 
 // 可上传 / 可识别的位图格式。
@@ -253,8 +254,29 @@ async function saveUploaded(site, buffer, originalName, options) {
     info = r.info;
   }
 
-  const baseName = path.basename(originalName, path.extname(originalName)) || 'image';
+  // 文件名要能安全地写进 Markdown 的 ![](...) 里。
+  // 空格会让 Markdown 认为地址到此为止，括号会提前闭合，两者都会导致图片显示不出来，
+  // 所以统一清洗：空格换连字符，去掉括号等 URL/Markdown 里有歧义的符号。
+  const baseName = safeImageName(path.basename(originalName, path.extname(originalName))) || 'image';
   const fileName = uniqueName(site.imagesDir, baseName + outExt);
+
+  // 内容去重：如果目录里已经有完全相同的图，直接复用，不再生成 -1 -2 副本
+  const outHash = sha1(outBuf);
+  const dup = findSameContent(site.imagesDir, outHash, outBuf.length);
+  if (dup) {
+    return {
+      fileName: dup,
+      url: '/images/' + dup,
+      before: buffer.length,
+      after: outBuf.length,
+      width: info.width,
+      height: info.height,
+      format: outExt.replace('.', ''),
+      reused: true,
+      note: '这张图博客里已经有了，直接复用 ' + dup
+    };
+  }
+
   fs.writeFileSync(path.join(site.imagesDir, fileName), outBuf);
 
   return {
@@ -266,6 +288,48 @@ async function saveUploaded(site, buffer, originalName, options) {
     height: info.height,
     format: outExt.replace('.', '')
   };
+}
+
+/** 文件名清洗：保留中文和字母数字，去掉会破坏 Markdown/URL 的字符 */
+function safeImageName(name) {
+  return String(name || '')
+    .replace(/[\s\u3000]+/g, '-') // 空白（含全角空格）→ 连字符
+    .replace(/[()（）\[\]{}#?%&+=,'"`<>|\\/:*]/g, '') // 会干扰 Markdown 或文件系统的符号
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, 80);
+}
+
+function sha1(buf) {
+  return crypto.createHash('sha1').update(buf).digest('hex');
+}
+
+/** 在图片目录里找内容完全相同的文件。
+ *  先用体积筛一遍（体积不同内容必然不同，省掉大量读盘），只对体积相同的才算哈希。 */
+function findSameContent(dir, hash, size) {
+  let names;
+  try {
+    names = fs.readdirSync(dir);
+  } catch (e) {
+    return '';
+  }
+  for (const n of names) {
+    if (!IMG_RE.test(n)) continue;
+    const full = path.join(dir, n);
+    let st;
+    try {
+      st = fs.statSync(full);
+    } catch (e) {
+      continue;
+    }
+    if (!st.isFile() || st.size !== size) continue;
+    try {
+      if (sha1(fs.readFileSync(full)) === hash) return n;
+    } catch (e) {
+      /* 读不了就跳过 */
+    }
+  }
+  return '';
 }
 
 module.exports = { listImages, unusedImages, saveUploaded, usedImagePaths, IMG_RE };
